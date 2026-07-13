@@ -9,3 +9,8 @@ For Vercel:
 - Root Directory: ./
 
 The app was compiled successfully before packaging.
+
+
+## v1.3.1 Day progression
+- Automatically advances to the calendar-based challenge day when the app opens or resumes.
+- Completing a day advances to the next challenge day.
