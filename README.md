@@ -1,16 +1,11 @@
-# Project Bali — verified static build
+# Project Bali v1.3.3
 
-This folder contains the already-built production app. No npm install or build step is required.
-
-For Vercel:
-- Framework Preset: Other
-- Build Command: leave blank
-- Output Directory: leave blank
-- Root Directory: ./
-
-The app was compiled successfully before packaging.
-
-
-## v1.3.1 Day progression
-- Automatically advances to the calendar-based challenge day when the app opens or resumes.
-- Completing a day advances to the next challenge day.
+Static production update with:
+- Day 2 preserved when the challenge started yesterday
+- Day 1 automatically retained as a completed rest day when appropriate
+- Morning check-in expanded by default
+- Morning bloating and energy scores
+- Morning sun yes/no
+- Previous-night sleep hours
+- Oura sleep score and readiness score
+- Existing calendar-based day sync and smart completion retained

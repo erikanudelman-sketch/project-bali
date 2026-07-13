@@ -1,4 +1,4 @@
-const CACHE = 'project-bali-v6-2';
+const CACHE = 'project-bali-v8-morning-day2';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
