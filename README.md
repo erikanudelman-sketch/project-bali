@@ -12,3 +12,6 @@ The searchable food catalog now queries USDA FoodData Central for generic foods.
 
 ## Drink control fix
 The + and − controls in the drink tracker now update the current day reliably and persist through local storage.
+
+## v1.4.3 drink controls in place
+The drink + and − buttons now update the count without reloading the app or returning the user to the Today tab.

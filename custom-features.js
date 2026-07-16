@@ -413,7 +413,26 @@
     event.stopPropagation();
     event.stopImmediatePropagation();
     if (updateDrinkCount(isPlus ? 1 : -1)) {
-      location.reload();
+      const state = readState();
+      const dayNumber = state ? currentDay(state) : null;
+      const count = dayNumber ? Number(ensureDay(state, dayNumber).alcohol?.count || 0) : 0;
+
+      // Update the visible count in place so the user stays on the current tab.
+      const candidates = [...card.querySelectorAll('span, strong, div, p')];
+      const countNode = candidates.find(node => {
+        const text = (node.textContent || '').trim();
+        return /^\d+$/.test(text) && !node.querySelector('*');
+      });
+      if (countNode) countNode.textContent = String(count);
+
+      // Notify listeners that saved state changed.
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEY,
+        newValue: JSON.stringify(state)
+      }));
+      window.dispatchEvent(new CustomEvent('project-bali:state-updated', {
+        detail: { dayNumber, alcoholCount: count }
+      }));
     }
   }, true);
 
