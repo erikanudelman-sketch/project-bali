@@ -436,6 +436,45 @@
     }
   }, true);
 
+
+  function isDrinkCard(element) {
+    const card = element?.closest?.('.bp-card');
+    if (!card) return null;
+    const text = (card.textContent || '').toLowerCase();
+    return (text.includes('track drinks') || text.includes('number of drinks')) ? card : null;
+  }
+
+  // Keep the drink-type dropdown interactive even when the surrounding React
+  // card has a click handler. Stop bubbling, but do not prevent the select's
+  // native browser behavior.
+  ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventName => {
+    document.addEventListener(eventName, event => {
+      const select = event.target.closest?.('select');
+      if (!select || !isDrinkCard(select)) return;
+      event.stopPropagation();
+    }, true);
+  });
+
+  document.addEventListener('change', event => {
+    const select = event.target.closest?.('select');
+    const card = select ? isDrinkCard(select) : null;
+    if (!select || !card) return;
+
+    event.stopPropagation();
+
+    const state = readState();
+    if (!state) return;
+    const dayNumber = currentDay(state);
+    const day = ensureDay(state, dayNumber);
+    day.alcohol = day.alcohol || { count: 0, type: 'Gin and soda', notes: '' };
+    day.alcohol.type = select.value || select.options?.[select.selectedIndex]?.text || '';
+    writeState(state);
+
+    window.dispatchEvent(new CustomEvent('project-bali:state-updated', {
+      detail: { dayNumber, alcoholType: day.alcohol.type }
+    }));
+  }, true);
+
   function boot() {
     maybeAutoComplete();
     renderCatalog();

@@ -15,3 +15,6 @@ The + and − controls in the drink tracker now update the current day reliably 
 
 ## v1.4.3 drink controls in place
 The drink + and − buttons now update the count without reloading the app or returning the user to the Today tab.
+
+## v1.4.4 drink dropdown fix
+The drink-type select now opens normally, saves the selected option, and no longer triggers navigation back to Today.
