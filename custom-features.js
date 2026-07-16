@@ -389,6 +389,7 @@
     const day = ensureDay(state, dayNumber);
     day.alcohol = day.alcohol || { count: 0, type: 'Gin and soda', notes: '' };
     day.alcohol.count = Math.max(0, (Number(day.alcohol.count) || 0) + delta);
+    day.alcohol.committed = false;
     writeState(state);
     return true;
   }
@@ -468,6 +469,7 @@
     const day = ensureDay(state, dayNumber);
     day.alcohol = day.alcohol || { count: 0, type: 'Gin and soda', notes: '' };
     day.alcohol.type = select.value || select.options?.[select.selectedIndex]?.text || '';
+    day.alcohol.committed = false;
     writeState(state);
 
     window.dispatchEvent(new CustomEvent('project-bali:state-updated', {
@@ -475,10 +477,103 @@
     }));
   }, true);
 
+
+  function renderDrinkCommitButton() {
+    const cards = [...document.querySelectorAll('.bp-card')];
+    const card = cards.find(candidate => {
+      const text = (candidate.textContent || '').toLowerCase();
+      return text.includes('track drinks') || text.includes('number of drinks');
+    });
+    if (!card || card.querySelector('#pb-log-drinks')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pb-drink-commit';
+    wrapper.style.marginTop = '14px';
+    wrapper.innerHTML = `
+      <button id="pb-log-drinks" type="button" class="bp-btn primary" style="width:100%">
+        Log Drinks
+      </button>
+      <p id="pb-drink-confirmation" class="bp-small" style="margin:8px 0 0;text-align:center" aria-live="polite"></p>
+    `;
+    card.appendChild(wrapper);
+
+    const button = wrapper.querySelector('#pb-log-drinks');
+    const confirmation = wrapper.querySelector('#pb-drink-confirmation');
+
+    function syncButtonState() {
+      const state = readState();
+      if (!state) return;
+      const day = ensureDay(state, currentDay(state));
+      const alcohol = day.alcohol || { count: 0, type: 'Gin and soda' };
+      if (alcohol.committed) {
+        button.textContent = 'Logged to Today ✓';
+        button.classList.remove('primary');
+        button.classList.add('secondary');
+        confirmation.textContent = `${Number(alcohol.count) || 0} ${alcohol.type || 'drink'}${Number(alcohol.count) === 1 ? '' : 's'} tracked today.`;
+      } else {
+        button.textContent = 'Log Drinks';
+        button.classList.remove('secondary');
+        button.classList.add('primary');
+        confirmation.textContent = '';
+      }
+    }
+
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      const state = readState();
+      if (!state) return;
+      const dayNumber = currentDay(state);
+      const day = ensureDay(state, dayNumber);
+      day.alcohol = day.alcohol || { count: 0, type: 'Gin and soda', notes: '' };
+
+      const select = card.querySelector('select');
+      if (select) {
+        day.alcohol.type = select.value || select.options?.[select.selectedIndex]?.text || day.alcohol.type;
+      }
+
+      const count = Math.max(0, Number(day.alcohol.count) || 0);
+      day.alcohol.count = count;
+      day.alcohol.committed = true;
+      day.alcohol.loggedAt = new Date().toISOString();
+      writeState(state);
+
+      button.textContent = 'Logged to Today ✓';
+      button.classList.remove('primary');
+      button.classList.add('secondary');
+      confirmation.textContent = `${count} ${day.alcohol.type || 'drink'}${count === 1 ? '' : 's'} tracked today.`;
+
+      window.dispatchEvent(new CustomEvent('project-bali:state-updated', {
+        detail: {
+          dayNumber,
+          alcoholCount: count,
+          alcoholType: day.alcohol.type,
+          alcoholCommitted: true
+        }
+      }));
+    }, true);
+
+    // If the user changes quantity or type after logging, make the button active again.
+    card.addEventListener('click', event => {
+      const label = (event.target.closest('button')?.textContent || '').trim();
+      if (['+', '＋', '-', '−', '–'].includes(label)) {
+        setTimeout(syncButtonState, 0);
+      }
+    }, true);
+    card.addEventListener('change', event => {
+      if (event.target.closest('select')) setTimeout(syncButtonState, 0);
+    }, true);
+
+    syncButtonState();
+  }
+
   function boot() {
     maybeAutoComplete();
     renderCatalog();
     renderCompletionCard();
+    renderDrinkCommitButton();
   }
 
   let timer;

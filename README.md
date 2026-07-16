@@ -18,3 +18,6 @@ The drink + and − buttons now update the count without reloading the app or re
 
 ## v1.4.4 drink dropdown fix
 The drink-type select now opens normally, saves the selected option, and no longer triggers navigation back to Today.
+
+## v1.4.5 explicit drink logging
+The drink tracker now includes a Log Drinks button. Selecting the drink type and quantity does not feel ambiguous: tapping the button commits the current selection to Today and displays a Logged to Today confirmation.
