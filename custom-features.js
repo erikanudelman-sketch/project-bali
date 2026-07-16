@@ -381,6 +381,42 @@
     card.querySelector('#pb-complete-day')?.addEventListener('click', markDayComplete);
   }
 
+
+  function updateDrinkCount(delta) {
+    const state = readState();
+    if (!state) return false;
+    const dayNumber = currentDay(state);
+    const day = ensureDay(state, dayNumber);
+    day.alcohol = day.alcohol || { count: 0, type: 'Gin and soda', notes: '' };
+    day.alcohol.count = Math.max(0, (Number(day.alcohol.count) || 0) + delta);
+    writeState(state);
+    return true;
+  }
+
+  // The compiled app's drink +/- controls can lose their React handler after
+  // incremental feature overlays re-render the page. Intercept those two
+  // controls at the document level and update the same saved day state directly.
+  document.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    const card = button.closest('.bp-card');
+    if (!card) return;
+    const cardText = (card.textContent || '').toLowerCase();
+    if (!cardText.includes('track drinks') && !cardText.includes('number of drinks')) return;
+
+    const label = (button.textContent || '').trim();
+    const isPlus = label === '+' || label === '＋';
+    const isMinus = label === '-' || label === '−' || label === '–';
+    if (!isPlus && !isMinus) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    if (updateDrinkCount(isPlus ? 1 : -1)) {
+      location.reload();
+    }
+  }, true);
+
   function boot() {
     maybeAutoComplete();
     renderCatalog();

@@ -8,3 +8,7 @@ Existing barcode scanning, nutrition, alcohol tracking, morning check-in, recipe
 
 ## v1.4.1 USDA food search
 The searchable food catalog now queries USDA FoodData Central for generic foods. If the USDA API is unavailable, the app falls back to its small offline catalog. Packaged food barcode lookup continues to use the existing scanner.
+
+
+## Drink control fix
+The + and − controls in the drink tracker now update the current day reliably and persist through local storage.
