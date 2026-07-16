@@ -1,11 +1,7 @@
-# Project Bali v1.3.3
+# Project Bali v1.4
 
-Static production update with:
-- Day 2 preserved when the challenge started yesterday
-- Day 1 automatically retained as a completed rest day when appropriate
-- Morning check-in expanded by default
-- Morning bloating and energy scores
-- Morning sun yes/no
-- Previous-night sleep hours
-- Oura sleep score and readiness score
-- Existing calendar-based day sync and smart completion retained
+Adds a searchable generic food catalog with grams, ounces, and serving inputs. Catalog foods add estimated calories, protein, carbs, fat, and fiber to the current day and flow into Today totals.
+
+Also adds persistent completion status controls for workouts and days, plus automatic day completion when workout/rest, steps, protein, and water are complete.
+
+Existing barcode scanning, nutrition, alcohol tracking, morning check-in, recipes, workouts, and local data storage are preserved.

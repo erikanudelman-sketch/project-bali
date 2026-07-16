@@ -1,0 +1,18 @@
+.pb-food-results { display: grid; gap: 6px; margin: 6px 0 10px; }
+.pb-food-result { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--jungle-dark); text-align: left; cursor: pointer; }
+.pb-food-result strong, .pb-food-result span { display: block; }
+.pb-food-result span { margin-top: 3px; color: var(--sage); font-size: 12px; }
+.pb-selected-food { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pb-selected-name { font-weight: 750; color: var(--jungle-dark); margin-bottom: 10px; }
+.pb-amount-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pb-food-preview { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+.pb-food-preview span, .pb-food-preview strong { padding: 5px 8px; border-radius: 999px; background: var(--cream); color: var(--jungle-dark); font-size: 12px; }
+.pb-completion-card { border-color: rgba(63,169,160,.45); }
+.pb-status-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.pb-status-row:first-of-type { border-top: 0; }
+.pb-status-row strong { color: var(--sage); }
+.pb-status-row strong.done { color: var(--jungle); }
+.pb-completion-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+@media (max-width: 380px) {
+  .pb-amount-grid, .pb-completion-actions { grid-template-columns: 1fr; }
+}
