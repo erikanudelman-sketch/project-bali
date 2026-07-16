@@ -5,7 +5,7 @@
   const FEATURE_ID = 'pb-search-catalog-card';
   const STATUS_ID = 'pb-completion-status-card';
 
-  const FOODS = [
+  const FALLBACK_FOODS = [
     { name: 'Chicken breast, cooked', aliases: ['chicken', 'chicken breast'], per100: { calories: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0 }, servingGrams: 170 },
     { name: 'Chicken thigh, boneless skinless, cooked', aliases: ['chicken thigh', 'thigh'], per100: { calories: 209, protein: 26, carbs: 0, fat: 10.9, fiber: 0 }, servingGrams: 170 },
     { name: 'Ground turkey, 93% lean, cooked', aliases: ['turkey', 'ground turkey'], per100: { calories: 203, protein: 27, carbs: 0, fat: 10, fiber: 0 }, servingGrams: 113 },
@@ -38,6 +38,66 @@
     { name: 'Cheddar cheese', aliases: ['cheese', 'cheddar'], per100: { calories: 403, protein: 25, carbs: 1.3, fat: 33, fiber: 0 }, servingGrams: 28 },
     { name: 'Protein shake, ready-to-drink', aliases: ['protein shake', 'shake'], per100: { calories: 62, protein: 10, carbs: 2.5, fat: 1, fiber: 0.5 }, servingGrams: 340 }
   ];
+
+
+  const USDA_SEARCH_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
+  const USDA_API_KEY = 'DEMO_KEY';
+
+  function nutrientValue(food, names, numbers = []) {
+    const nutrients = Array.isArray(food?.foodNutrients) ? food.foodNutrients : [];
+    const match = nutrients.find(item => {
+      const name = String(item.nutrientName || item.nutrient?.name || '').toLowerCase();
+      const number = String(item.nutrientNumber || item.nutrient?.number || '');
+      return names.some(candidate => name === candidate || name.includes(candidate)) || numbers.includes(number);
+    });
+    return Number(match?.value ?? match?.amount ?? 0) || 0;
+  }
+
+  function normalizeUsdaFood(food) {
+    const description = String(food.description || food.lowercaseDescription || 'USDA food');
+    const dataType = String(food.dataType || 'USDA');
+    const servingSize = Number(food.servingSize) > 0 && String(food.servingSizeUnit || '').toLowerCase().startsWith('g')
+      ? Number(food.servingSize)
+      : 100;
+    return {
+      name: description,
+      aliases: [description],
+      source: `USDA FoodData Central · ${dataType}`,
+      fdcId: food.fdcId,
+      servingGrams: servingSize,
+      per100: {
+        calories: nutrientValue(food, ['energy'], ['208']),
+        protein: nutrientValue(food, ['protein'], ['203']),
+        carbs: nutrientValue(food, ['carbohydrate, by difference', 'carbohydrate'], ['205']),
+        fat: nutrientValue(food, ['total lipid (fat)', 'total fat'], ['204']),
+        fiber: nutrientValue(food, ['fiber, total dietary', 'dietary fiber'], ['291'])
+      }
+    };
+  }
+
+  async function searchUsdaFoods(query, signal) {
+    const params = new URLSearchParams({
+      api_key: USDA_API_KEY,
+      query,
+      pageSize: '12',
+      dataType: 'Foundation,SR Legacy,Survey (FNDDS)'
+    });
+    const response = await fetch(`${USDA_SEARCH_URL}?${params.toString()}`, { signal });
+    if (!response.ok) throw new Error(`USDA search failed (${response.status})`);
+    const data = await response.json();
+    return (Array.isArray(data.foods) ? data.foods : [])
+      .map(normalizeUsdaFood)
+      .filter(food => food.per100.calories || food.per100.protein || food.per100.carbs || food.per100.fat)
+      .slice(0, 10);
+  }
+
+  function searchFallbackFoods(query) {
+    const normalized = query.toLowerCase();
+    return FALLBACK_FOODS
+      .filter(food => [food.name, ...(food.aliases || [])].some(value => value.toLowerCase().includes(normalized)))
+      .slice(0, 8)
+      .map(food => ({ ...food, source: 'Offline fallback catalog' }));
+  }
 
   function readState() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
@@ -84,7 +144,7 @@
     const entry = {
       id: `catalog-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: food.name,
-      source: 'Search catalog',
+      source: food.source || 'USDA FoodData Central',
       amountGrams: round1(grams),
       calories: round1(food.per100.calories * factor),
       protein: round1(food.per100.protein * factor),
@@ -161,8 +221,8 @@
     card.id = FEATURE_ID;
     card.className = 'bp-card pb-catalog-card';
     card.innerHTML = `
-      <div class="bp-card-title">Search food catalog</div>
-      <p class="bp-small">Search common foods, enter a weight, and add estimated nutrition directly to Today.</p>
+      <div class="bp-card-title">Search USDA food catalog</div>
+      <p class="bp-small">Search USDA FoodData Central, enter a weight, and add nutrition directly to Today.</p>
       <label class="bp-label" for="pb-food-search">Food</label>
       <input id="pb-food-search" class="bp-input" type="search" placeholder="Try chicken thigh, rice, yogurt…" autocomplete="off" />
       <div id="pb-food-results" class="pb-food-results" role="listbox" aria-label="Food search results"></div>
@@ -184,7 +244,7 @@
         </div>
         <div id="pb-food-preview" class="pb-food-preview" aria-live="polite"></div>
         <button id="pb-add-food" type="button" class="bp-btn primary" style="width:100%">Add to Today</button>
-        <p class="bp-small" style="margin-top:8px">Generic catalog values are estimates. Use the barcode scanner for branded packaged foods.</p>
+        <p class="bp-small" style="margin-top:8px">Values come from USDA FoodData Central and are calculated by weight. Use the barcode scanner for branded packaged foods.</p>
       </div>`;
 
     (logCard || scanCard.nextSibling) ? (logCard ? logCard.parentNode.insertBefore(card, logCard) : scanCard.parentNode.insertBefore(card, scanCard.nextSibling)) : scanCard.parentNode.appendChild(card);
@@ -198,6 +258,8 @@
     const preview = card.querySelector('#pb-food-preview');
     const addButton = card.querySelector('#pb-add-food');
     let selected = null;
+    let searchAbortController = null;
+    let searchRequestId = 0;
 
     const gramsFromInputs = () => {
       const amount = Math.max(0, Number(amountInput.value) || 0);
@@ -230,20 +292,50 @@
       updatePreview();
     };
 
-    const showResults = () => {
-      const query = search.value.trim().toLowerCase();
-      if (query.length < 2) { results.innerHTML = ''; return; }
-      const matches = FOODS.filter(food => [food.name, ...(food.aliases || [])].some(value => value.toLowerCase().includes(query))).slice(0, 8);
-      results.innerHTML = matches.length ? matches.map((food, index) => `
-        <button type="button" class="pb-food-result" data-index="${FOODS.indexOf(food)}" role="option">
-          <strong>${food.name}</strong><span>${food.per100.calories} cal · ${food.per100.protein}g protein per 100g</span>
-        </button>`).join('') : '<div class="bp-small" style="padding:10px">No match yet. Try a simpler term.</div>';
+    const renderResults = foods => {
+      results._foods = foods;
+      results.innerHTML = foods.length ? foods.map((food, index) => `
+        <button type="button" class="pb-food-result" data-result-index="${index}" role="option">
+          <strong>${food.name}</strong>
+          <span>${round1(food.per100.calories)} cal · ${round1(food.per100.protein)}g protein per 100g</span>
+          <small>${food.source || 'USDA FoodData Central'}</small>
+        </button>`).join('') : '<div class="bp-small" style="padding:10px">No USDA match found. Try a simpler term.</div>';
     };
 
-    search.addEventListener('input', showResults);
+    const showResults = async () => {
+      const query = search.value.trim();
+      if (query.length < 2) {
+        if (searchAbortController) searchAbortController.abort();
+        results.innerHTML = '';
+        return;
+      }
+      const requestId = ++searchRequestId;
+      if (searchAbortController) searchAbortController.abort();
+      searchAbortController = new AbortController();
+      results.innerHTML = '<div class="bp-small" style="padding:10px">Searching USDA FoodData Central…</div>';
+      try {
+        const foods = await searchUsdaFoods(query, searchAbortController.signal);
+        if (requestId !== searchRequestId) return;
+        renderResults(foods.length ? foods : searchFallbackFoods(query));
+      } catch (error) {
+        if (error?.name === 'AbortError' || requestId !== searchRequestId) return;
+        const fallback = searchFallbackFoods(query);
+        renderResults(fallback);
+        if (!fallback.length) {
+          results.innerHTML = '<div class="bp-small" style="padding:10px">USDA search is temporarily unavailable. Try again, scan a barcode, or use manual food entry.</div>';
+        }
+      }
+    };
+
+    let searchDebounce;
+    search.addEventListener('input', () => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(showResults, 300);
+    });
     results.addEventListener('click', event => {
-      const button = event.target.closest('[data-index]');
-      if (button) selectFood(FOODS[Number(button.dataset.index)]);
+      const button = event.target.closest('[data-result-index]');
+      const food = results._foods?.[Number(button?.dataset.resultIndex)];
+      if (food) selectFood(food);
     });
     amountInput.addEventListener('input', updatePreview);
     unitSelect.addEventListener('change', () => {
